@@ -25,7 +25,6 @@ jest.mock('react-virtuoso', () => {
       <Virtuoso
         ref={ref}
         {...props}
-        initialItemCount={20}
         overscan={0}
         initialTopMostItemIndex={0}
         fixedItemHeight={30}
