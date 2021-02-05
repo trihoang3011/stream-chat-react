@@ -28,7 +28,7 @@ jest.mock('react-virtuoso', () => {
         initialItemCount={20}
         overscan={0}
         initialTopMostItemIndex={0}
-        itemHeight={30}
+        fixedItemHeight={30}
       />
     )),
   };
@@ -77,6 +77,16 @@ describe('VirtualizedMessageList', () => {
   it('should render the list without any message', async () => {
     const { client, channel } = await createChannel(true);
     let tree;
+
+    function createNodeMock(element) {
+      if (element.type === 'div') {
+        return {
+          addEventListener() {},
+        };
+      }
+      return null;
+    }
+
     await renderer.act(async () => {
       tree = await renderer.create(
         <Chat client={client}>
@@ -84,6 +94,9 @@ describe('VirtualizedMessageList', () => {
             <VirtualizedMessageList />
           </Channel>
         </Chat>,
+        {
+          createNodeMock,
+        },
       );
     });
 
