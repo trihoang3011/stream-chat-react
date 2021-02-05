@@ -5,6 +5,7 @@ import React, {
   useEffect,
   useCallback,
   useRef,
+  useMemo,
 } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -47,7 +48,7 @@ const VirtualizedMessageList = ({
   const [newMessagesNotification, setNewMessagesNotification] = useState(false);
 
   const virtuoso = useRef(
-    /** @type {import('react-virtuoso').VirtuosoMethods | undefined} */ (undefined),
+    /** @type {import('react-virtuoso').VirtuosoHandle | undefined} */ (undefined),
   );
   const mounted = useRef(false);
   const atBottom = useRef(false);
@@ -89,12 +90,15 @@ const VirtualizedMessageList = ({
     }
   }, [messages.length]);
 
+  const [numItemsPrepended, setNumItemsPrepended] = useState(0);
   const messageRenderer = useCallback(
-    (messageList, i) => {
+    (messageList, virtuosoIndex) => {
+      const streamMessagesIndex = virtuosoIndex + numItemsPrepended;
       // use custom renderer supplied by client if present and skip the rest
-      if (customMessageRenderer) return customMessageRenderer(messageList, i);
+      if (customMessageRenderer)
+        return customMessageRenderer(messageList, streamMessagesIndex);
 
-      const message = messageList[i];
+      const message = messageList[streamMessagesIndex];
       if (!message) return <div style={{ height: '1px' }}></div>; // returning null or zero height breaks the virtuoso
 
       if (message.type === 'channel.event' || message.type === 'system')
@@ -108,14 +112,45 @@ const VirtualizedMessageList = ({
           message={message}
           groupedByUser={
             shouldGroupByUser &&
-            i > 0 &&
-            message.user.id === messageList[i - 1].user.id
+            streamMessagesIndex > 0 &&
+            message.user.id === messageList[streamMessagesIndex - 1].user.id
           }
         />
       );
     },
-    [MessageDeleted, customMessageRenderer, shouldGroupByUser],
+    [
+      MessageDeleted,
+      customMessageRenderer,
+      shouldGroupByUser,
+      numItemsPrepended,
+    ],
   );
+
+  const virtuosoComponents = useMemo(() => {
+    const EmptyPlaceholder = () => <EmptyStateIndicator listType="message" />;
+    const Header = () =>
+      loadingMore ? (
+        <div className="str-chat__virtual-list__loading">
+          <LoadingIndicator size={20} />
+        </div>
+      ) : (
+        <></>
+      );
+    const Footer = () =>
+      TypingIndicator ? <TypingIndicator avatarSize={24} /> : <></>;
+
+    return {
+      EmptyPlaceholder,
+      ScrollSeekPlaceHolder: scrollSeekPlaceHolder,
+      Header,
+      Footer,
+    };
+  }, [
+    EmptyStateIndicator,
+    scrollSeekPlaceHolder,
+    loadingMore,
+    TypingIndicator,
+  ]);
 
   return (
     <div className="str-chat__virtual-list">
@@ -125,27 +160,14 @@ const VirtualizedMessageList = ({
         totalCount={messages.length}
         overscan={overscan}
         followOutput={true}
-        maxHeightCacheSize={2000} // reset the cache once it reaches 2k
-        scrollSeek={scrollSeekPlaceHolder}
-        item={(i) => messageRenderer(messages, i)}
-        emptyComponent={() => <EmptyStateIndicator listType="message" />}
-        header={() =>
-          loadingMore ? (
-            <div className="str-chat__virtual-list__loading">
-              <LoadingIndicator size={20} />
-            </div>
-          ) : (
-            <></>
-          )
-        }
-        footer={() =>
-          TypingIndicator ? <TypingIndicator avatarSize={24} /> : <></>
-        }
+        itemContent={(i) => messageRenderer(messages, i)}
+        components={virtuosoComponents}
+        firstItemIndex={-numItemsPrepended}
         startReached={() => {
           // mounted.current prevents immediate loadMore on first render
           if (mounted.current && hasMore) {
-            loadMore(messageLimit).then(
-              virtuoso.current?.adjustForPrependedItems,
+            loadMore(messageLimit).then((newItems) =>
+              setNumItemsPrepended((old) => old + newItems),
             );
           }
         }}
