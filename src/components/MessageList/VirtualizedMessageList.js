@@ -79,15 +79,7 @@ const VirtualizedMessageList = ({
   }, [client.userID, messages]);
 
   useEffect(() => {
-    /*
-     * scroll to bottom when list is rendered for the first time
-     * this is due to initialTopMostItemIndex buggy behavior leading to empty screen
-     */
-    if (mounted.current) return;
     mounted.current = true;
-    if (messages.length && virtuoso.current) {
-      virtuoso.current.scrollToIndex(messages.length - 1);
-    }
   }, [messages.length]);
 
   const [numItemsPrepended, setNumItemsPrepended] = useState(0);
