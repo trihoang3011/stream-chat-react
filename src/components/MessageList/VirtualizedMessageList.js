@@ -93,11 +93,13 @@ const VirtualizedMessageList = ({
       const message = messageList[streamMessagesIndex];
       if (!message) return <div style={{ height: '1px' }}></div>; // returning null or zero height breaks the virtuoso
 
-      if (message.type === 'channel.event' || message.type === 'system')
+      if (message.type === 'channel.event' || message.type === 'system') {
         return <MessageSystem message={message} />;
+      }
 
-      if (message.deleted_at)
+      if (message.deleted_at) {
         return smartRender(MessageDeleted, { message }, null);
+      }
 
       return (
         <Message
