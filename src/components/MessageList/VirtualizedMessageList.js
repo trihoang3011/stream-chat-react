@@ -20,6 +20,8 @@ import {
   MessageDeleted as DefaultMessageDeleted,
 } from '../Message';
 
+const prependOffset = 10000;
+
 /**
  * VirtualizedMessageList - This component renders a list of messages in a virtual list. Its a consumer of [Channel Context](https://getstream.github.io/stream-chat-react/#channel)
  * It is pretty fast for rendering thousands of messages but it needs its Message componet to have fixed height
@@ -85,7 +87,8 @@ const VirtualizedMessageList = ({
   const [numItemsPrepended, setNumItemsPrepended] = useState(0);
   const messageRenderer = useCallback(
     (messageList, virtuosoIndex) => {
-      const streamMessagesIndex = virtuosoIndex + numItemsPrepended;
+      const streamMessagesIndex =
+        virtuosoIndex + numItemsPrepended - prependOffset;
       // use custom renderer supplied by client if present and skip the rest
       if (customMessageRenderer)
         return customMessageRenderer(messageList, streamMessagesIndex);
@@ -156,7 +159,7 @@ const VirtualizedMessageList = ({
         followOutput={true}
         itemContent={(i) => messageRenderer(messages, i)}
         components={virtuosoComponents}
-        firstItemIndex={-numItemsPrepended}
+        firstItemIndex={prependOffset - numItemsPrepended}
         startReached={() => {
           // mounted.current prevents immediate loadMore on first render
           if (mounted.current && hasMore) {
