@@ -8,7 +8,10 @@ import ReactMarkdown from 'react-markdown';
 import * as i18next from 'i18next';
 import * as Dayjs from 'dayjs';
 import { ReactPlayerProps } from 'react-player';
-import { ScrollSeekConfiguration } from 'react-virtuoso/dist/engines/scrollSeekEngine';
+import {
+  ScrollSeekPlaceholderProps,
+  ScrollSeekConfiguration,
+} from 'react-virtuoso';
 
 export type Mute = Client.Mute<StreamChatReactUserType>;
 export type AnyType = Record<string, any>;
@@ -574,8 +577,13 @@ export interface VirtualizedMessageListInternalProps {
    *    change: () => null,
    *    placeholder: ({index, height})=> <div style={{height: height + "px"}}>{index}</div>,
    *  }
+   *
+   *  Note: virtuoso has broken out the placeholder value and instead includes it in its components prop.
+   *  TODO: break out placeholder when making other breaking changes.
    */
-  scrollSeekPlaceHolder?: ScrollSeekConfiguration;
+  scrollSeekPlaceHolder?: ScrollSeekConfiguration & {
+    placeholder: React.ComponentType<ScrollSeekPlaceholderProps>;
+  };
 }
 
 export interface VirtualizedMessageListProps

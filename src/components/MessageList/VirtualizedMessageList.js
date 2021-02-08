@@ -138,16 +138,28 @@ const VirtualizedMessageList = ({
 
     return {
       EmptyPlaceholder,
-      ScrollSeekPlaceHolder: scrollSeekPlaceHolder,
+      ScrollSeekPlaceHolder: scrollSeekPlaceHolder?.placeholder,
       Header,
       Footer,
     };
   }, [
     EmptyStateIndicator,
-    scrollSeekPlaceHolder,
     loadingMore,
     TypingIndicator,
+    scrollSeekPlaceHolder,
   ]);
+
+  // TODO: split scrollSeekPlaceholder into two props (e.g. ScrollSeekPlaceholder and scrollSeekConfiguration) when making breaking changes
+  const scrollSeekConfigurationProp = useMemo(() => {
+    if (
+      scrollSeekPlaceHolder &&
+      'enter' in scrollSeekPlaceHolder &&
+      'exit' in scrollSeekPlaceHolder
+    ) {
+      return scrollSeekPlaceHolder;
+    }
+    return undefined;
+  }, []);
 
   return (
     <div className="str-chat__virtual-list">
@@ -173,6 +185,7 @@ const VirtualizedMessageList = ({
           if (isAtBottom && newMessagesNotification)
             setNewMessagesNotification(false);
         }}
+        scrollSeekConfiguration={scrollSeekConfigurationProp}
       />
 
       <div className="str-chat__list-notifications">
