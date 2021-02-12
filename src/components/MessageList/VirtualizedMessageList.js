@@ -33,9 +33,8 @@ const VirtualizedMessageList = ({
   messages,
   loadMore,
   hasMore,
-  loadingMore,
   messageLimit = 100,
-  overscan = 200,
+  overscan = 1000,
   shouldGroupByUser = false,
   customMessageRenderer,
   scrollSeekPlaceHolder,
@@ -52,7 +51,6 @@ const VirtualizedMessageList = ({
   const virtuoso = useRef(
     /** @type {import('react-virtuoso').VirtuosoHandle | undefined} */ (undefined),
   );
-  const mounted = useRef(false);
   const atBottom = useRef(false);
   const lastMessageId = useRef('');
 
@@ -80,11 +78,29 @@ const VirtualizedMessageList = ({
     setNewMessagesNotification(true);
   }, [client.userID, messages]);
 
-  useEffect(() => {
-    mounted.current = true;
-  }, [messages.length]);
+  const firstItemId = useRef(messages[0].id);
+  const earliestMessageId = useRef(messages[0].id);
+  const previousNumItemsPrepended = useRef(0);
+  const numItemsPrepended = useMemo(() => {
+    // if no new messages were prepended, return early (same amount as before)
+    if (messages[0].id === earliestMessageId.current) {
+      return previousNumItemsPrepended.current;
+    }
+    earliestMessageId.current = messages[0].id;
+    // if new messages were prepended, find out how many
+    for (
+      let i = previousNumItemsPrepended.current; // start with this number because there cannot be fewer prepended items than before
+      i < messages.length;
+      i += 1
+    ) {
+      if (messages[i].id === firstItemId.current) {
+        previousNumItemsPrepended.current = i;
+        return i;
+      }
+    }
+    return 0;
+  }, [messages]);
 
-  const [numItemsPrepended, setNumItemsPrepended] = useState(0);
   const messageRenderer = useCallback(
     (messageList, virtuosoIndex) => {
       const streamMessagesIndex =
@@ -126,7 +142,7 @@ const VirtualizedMessageList = ({
   const virtuosoComponents = useMemo(() => {
     const EmptyPlaceholder = () => <EmptyStateIndicator listType="message" />;
     const Header = () =>
-      loadingMore ? (
+      hasMore ? (
         <div className="str-chat__virtual-list__loading">
           <LoadingIndicator size={20} />
         </div>
@@ -142,12 +158,7 @@ const VirtualizedMessageList = ({
       Header,
       Footer,
     };
-  }, [
-    EmptyStateIndicator,
-    loadingMore,
-    TypingIndicator,
-    scrollSeekPlaceHolder,
-  ]);
+  }, [EmptyStateIndicator, hasMore, TypingIndicator, scrollSeekPlaceHolder]);
 
   // TODO: split scrollSeekPlaceholder into two props (e.g. ScrollSeekPlaceholder and scrollSeekConfiguration) when making breaking changes
   const scrollSeekConfigurationProp = useMemo(() => {
@@ -173,11 +184,8 @@ const VirtualizedMessageList = ({
         components={virtuosoComponents}
         firstItemIndex={prependOffset - numItemsPrepended}
         startReached={() => {
-          // mounted.current prevents immediate loadMore on first render
-          if (mounted.current && hasMore) {
-            loadMore(messageLimit).then((newItems) =>
-              setNumItemsPrepended((old) => old + newItems),
-            );
+          if (hasMore) {
+            loadMore(messageLimit);
           }
         }}
         atBottomStateChange={(isAtBottom) => {
@@ -214,7 +222,7 @@ export default function VirtualizedMessageListWithContext(props) {
   return (
     <ChannelContext.Consumer>
       {(
-        /* {Required<Pick<import('types').ChannelContextValue, 'client' | 'messages' | 'loadMore' | 'hasMore' | 'loadingMore'>>} */ context,
+        /* {Required<Pick<import('types').ChannelContextValue, 'client' | 'messages' | 'loadMore' | 'hasMore'>>} */ context,
       ) => (
         <VirtualizedMessageList
           client={context.client}
@@ -224,8 +232,6 @@ export default function VirtualizedMessageListWithContext(props) {
           loadMore={context.loadMore}
           // @ts-expect-error
           hasMore={context.hasMore}
-          // @ts-expect-error
-          loadingMore={context.loadingMore}
           {...props}
         />
       )}
