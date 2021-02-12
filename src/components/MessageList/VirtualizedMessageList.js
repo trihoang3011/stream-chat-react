@@ -33,6 +33,7 @@ const VirtualizedMessageList = ({
   messages,
   loadMore,
   hasMore,
+  loadingMore,
   messageLimit = 100,
   overscan = 1000,
   shouldGroupByUser = false,
@@ -78,18 +79,23 @@ const VirtualizedMessageList = ({
     setNewMessagesNotification(true);
   }, [client.userID, messages]);
 
-  const firstItemId = useRef(messages[0].id);
-  const earliestMessageId = useRef(messages[0].id);
+  const firstItemId = useRef(messages[0]?.id);
+  const earliestMessageId = useRef(messages[0]?.id);
   const previousNumItemsPrepended = useRef(0);
   const numItemsPrepended = useMemo(() => {
+    if (!messages.length) return 0;
     // if no new messages were prepended, return early (same amount as before)
-    if (messages[0].id === earliestMessageId.current) {
+    if (messages[0]?.id === earliestMessageId.current) {
       return previousNumItemsPrepended.current;
+    }
+    if (!firstItemId.current) {
+      firstItemId.current = messages[0].id;
     }
     earliestMessageId.current = messages[0].id;
     // if new messages were prepended, find out how many
     for (
-      let i = previousNumItemsPrepended.current; // start with this number because there cannot be fewer prepended items than before
+      // start with this number because there cannot be fewer prepended items than before
+      let i = previousNumItemsPrepended.current;
       i < messages.length;
       i += 1
     ) {
@@ -142,7 +148,7 @@ const VirtualizedMessageList = ({
   const virtuosoComponents = useMemo(() => {
     const EmptyPlaceholder = () => <EmptyStateIndicator listType="message" />;
     const Header = () =>
-      hasMore ? (
+      loadingMore ? (
         <div className="str-chat__virtual-list__loading">
           <LoadingIndicator size={20} />
         </div>
@@ -158,7 +164,12 @@ const VirtualizedMessageList = ({
       Header,
       Footer,
     };
-  }, [EmptyStateIndicator, hasMore, TypingIndicator, scrollSeekPlaceHolder]);
+  }, [
+    EmptyStateIndicator,
+    loadingMore,
+    TypingIndicator,
+    scrollSeekPlaceHolder,
+  ]);
 
   // TODO: split scrollSeekPlaceholder into two props (e.g. ScrollSeekPlaceholder and scrollSeekConfiguration) when making breaking changes
   const scrollSeekConfigurationProp = useMemo(() => {
@@ -232,6 +243,8 @@ export default function VirtualizedMessageListWithContext(props) {
           loadMore={context.loadMore}
           // @ts-expect-error
           hasMore={context.hasMore}
+          // @ts-expect-error
+          loadingMore={context.loadingMore}
           {...props}
         />
       )}
